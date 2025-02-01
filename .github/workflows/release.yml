@@ -1,0 +1,34 @@
+name: Release API
+
+on:
+  workflow_run:
+    workflows: [ Build Project ]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  release:
+    name: Release API
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Download a Build Artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: app-jar
+          path: target
+      
+      - name: Get version
+        id: get_version
+        run: echo "VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2.2.1
+        with:
+          tag_name: v${{ env.VERSION }}
+          files: target/*.jar
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
